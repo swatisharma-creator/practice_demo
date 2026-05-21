@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Practice Zone — AI Tutor Demo</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,400;0,600;1,400&display=swap');
+
+  :root {
+    --bg: #f5f2ec;
+    --card: #ffffff;
+    --ink: #1a1814;
+    --ink2: #6b6760;
+    --ink3: #a8a5a0;
+    --accent: #2d5a3d;
+    --accent-light: #e8f2ec;
+    --warn: #b85c1a;
+    --warn-light: #fdf0e8;
+    --border: rgba(26,24,20,0.1);
+    --border-md: rgba(26,24,20,0.18);
+    --radius: 12px;
+    --radius-lg: 18px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--ink);
+    color: #fff;
+    padding: 0 28px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  header .logo {
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+    letter-spacing: -0.3px;
+    color: #fff;
+  }
+  header .badge {
+    background: var(--accent);
+    color: #d4f0de;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: 20px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+  }
+  header .spacer { flex: 1; }
+  header .api-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 8px;
+    padding: 5px 12px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.75);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  header .api-pill:hover { background: rgba(255,255,255,0.16); }
+  header .api-pill input {
+    background: none;
+    border: none;
+    outline: none;
+    color: #fff;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    width: 180px;
+  }
+  header .api-pill input::placeholder { color: rgba(255,255,255,0.45); }
+
+  /* ── Screens ── */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ── Setup screen ── */
+  .setup-wrap {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 48px 24px;
+  }
+  .setup-hero {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  .setup-hero h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 36px;
+    font-weight: 600;
+    letter-spacing: -0.8px;
+    line-height: 1.2;
+    margin-bottom: 10px;
+  }
+  .setup-hero p {
+    color: var(--ink2);
+    font-size: 16px;
+  }
+
+  .upload-card {
+    background: var(--card);
+    border: 1px dashed var(--border-md);
+    border-radius: var(--radius-lg);
+    padding: 40px 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+  }
+  .upload-card:hover, .upload-card.drag { border-color: var(--accent); background: var(--accent-light); }
+  .upload-card input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-icon {
+    width: 52px; height: 52px;
+    background: var(--accent-light);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 16px;
+    font-size: 24px;
+  }
+  .upload-card h3 { font-size: 17px; font-weight: 500; margin-bottom: 6px; }
+  .upload-card p { color: var(--ink2); font-size: 14px; }
+
+  .chapter-name-input {
+    margin-top: 20px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-size: 15px;
+    font-family: 'DM Sans', sans-serif;
+    width: 100%;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .chapter-name-input:focus { border-color: var(--accent); }
+
+  .parse-btn {
+    margin-top: 16px;
+    width: 100%;
+    padding: 14px;
+    background: var(--ink);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 15px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .parse-btn:hover { opacity: 0.85; }
+  .parse-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .progress-bar-wrap {
+    margin-top: 16px;
+    display: none;
+  }
+  .progress-bar-wrap.show { display: block; }
+  .progress-label { font-size: 13px; color: var(--ink2); margin-bottom: 8px; }
+  .progress-track {
+    height: 4px; background: var(--border); border-radius: 4px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; background: var(--accent); border-radius: 4px;
+    width: 0%; transition: width 0.3s;
+  }
+
+  /* ── Chapter screen ── */
+  .chapters-wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 36px 24px;
+  }
+  .screen-title {
+    font-family: 'Fraunces', serif;
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.4px;
+    margin-bottom: 6px;
+  }
+  .screen-sub { color: var(--ink2); font-size: 14px; margin-bottom: 28px; }
+
+  .chapter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+  }
+  .chapter-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+  }
+  .chapter-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+    box-shadow: 0 6px 20px rgba(45,90,61,0.12);
+  }
+  .chapter-icon {
+    width: 40px; height: 40px;
+    background: var(--accent-light);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    margin-bottom: 12px;
+  }
+  .chapter-card h3 { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+  .chapter-card .q-count { font-size: 13px; color: var(--ink2); }
+  .chapter-card .progress-dots {
+    display: flex; gap: 4px; margin-top: 12px;
+  }
+  .chapter-card .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--border-md);
+  }
+  .chapter-card .dot.done { background: var(--accent); }
+
+  .add-chapter-btn {
+    background: none;
+    border: 1px dashed var(--border-md);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    cursor: pointer;
+    color: var(--ink2);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .add-chapter-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Question screen ── */
+  .question-wrap {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+  .q-topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .back-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    color: var(--ink2);
+    transition: border-color 0.15s;
+  }
+  .back-btn:hover { border-color: var(--ink2); }
+  .q-chapter-name { font-size: 14px; color: var(--ink2); }
+  .q-fraction { margin-left: auto; font-size: 14px; color: var(--ink3); font-weight: 500; }
+
+  .q-progress-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 24px;
+  }
+  .q-tick {
+    height: 3px;
+    border-radius: 3px;
+    background: var(--border);
+    flex: 1;
+    transition: background 0.3s;
+  }
+  .q-tick.done { background: var(--accent); }
+  .q-tick.current { background: var(--ink3); }
+
+  .q-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+  .q-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--ink3);
+    margin-bottom: 10px;
+  }
+  .q-text {
+    font-size: 17px;
+    line-height: 1.65;
+    color: var(--ink);
+  }
+  .q-image-preview {
+    margin-top: 12px;
+    max-width: 100%;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    display: none;
+  }
+
+  .upload-answer-area {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .upload-answer-area h3 { font-size: 15px; font-weight: 500; margin-bottom: 16px; }
+
+  .img-upload-zone {
+    border: 1.5px dashed var(--border-md);
+    border-radius: var(--radius);
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+  }
+  .img-upload-zone:hover { border-color: var(--accent); background: var(--accent-light); }
+  .img-upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .img-upload-zone .zone-icon { font-size: 28px; margin-bottom: 8px; }
+  .img-upload-zone p { font-size: 14px; color: var(--ink2); }
+
+  .img-preview-wrap { display: none; text-align: center; }
+  .img-preview-wrap img {
+    max-width: 100%;
+    max-height: 320px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    object-fit: contain;
+  }
+  .img-preview-wrap .change-btn {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--ink2);
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  .submit-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 15px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .submit-btn:hover { opacity: 0.88; }
+  .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Result card ── */
+  .result-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 20px;
+    display: none;
+  }
+  .result-card.show { display: block; }
+
+  .result-header {
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .verdict-icon {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .verdict-correct .verdict-icon { background: var(--accent-light); }
+  .verdict-partial .verdict-icon { background: #fff8e0; }
+  .verdict-wrong .verdict-icon { background: #fef0ed; }
+  .verdict-correct .verdict-title { color: var(--accent); }
+  .verdict-partial .verdict-title { color: #a07010; }
+  .verdict-wrong .verdict-title { color: var(--warn); }
+  .verdict-title { font-size: 17px; font-weight: 600; }
+  .verdict-sub { font-size: 13px; color: var(--ink2); margin-top: 2px; }
+
+  .result-body { padding: 24px; }
+  .result-section { margin-bottom: 22px; }
+  .result-section:last-child { margin-bottom: 0; }
+  .result-section-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--ink3);
+    margin-bottom: 8px;
+  }
+  .result-section p { font-size: 15px; line-height: 1.65; color: var(--ink); }
+
+  .steps-list { list-style: none; }
+  .steps-list li {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .steps-list li:last-child { border-bottom: none; }
+  .step-num {
+    width: 22px; height: 22px;
+    background: var(--accent-light);
+    color: var(--accent);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .mistake-box {
+    background: var(--warn-light);
+    border-left: 3px solid var(--warn);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 14px 16px;
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--ink);
+  }
+
+  .tip-box {
+    background: #f0f5ff;
+    border: 1px solid #c5d5f5;
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    font-size: 14px;
+    line-height: 1.65;
+    color: #1a3060;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .tip-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  .action-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 4px;
+  }
+  .next-btn {
+    flex: 1;
+    padding: 13px;
+    background: var(--ink);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 15px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .next-btn:hover { opacity: 0.85; }
+  .retry-btn {
+    padding: 13px 20px;
+    background: none;
+    color: var(--ink2);
+    border: 1px solid var(--border-md);
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .retry-btn:hover { border-color: var(--ink2); }
+
+  /* ── Evaluation loading ── */
+  .eval-loading {
+    display: none;
+    text-align: center;
+    padding: 36px 24px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 20px;
+  }
+  .eval-loading.show { display: block; }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 14px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .eval-loading p { font-size: 14px; color: var(--ink2); }
+  .eval-steps { margin-top: 12px; }
+  .eval-step {
+    font-size: 13px; color: var(--ink3);
+    padding: 4px 0;
+    transition: color 0.3s;
+  }
+  .eval-step.active { color: var(--ink); }
+  .eval-step.done { color: var(--accent); }
+
+  /* ── Completion screen ── */
+  .complete-wrap {
+    max-width: 500px;
+    margin: 60px auto;
+    padding: 0 24px;
+    text-align: center;
+  }
+  .complete-icon {
+    width: 80px; height: 80px;
+    background: var(--accent-light);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+    margin: 0 auto 24px;
+  }
+  .complete-wrap h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .complete-wrap p { color: var(--ink2); margin-bottom: 28px; }
+  .score-badges {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .score-badge {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 24px;
+    text-align: center;
+  }
+  .score-badge .num { font-size: 28px; font-weight: 600; }
+  .score-badge .lbl { font-size: 12px; color: var(--ink2); margin-top: 2px; }
+  .score-badge.correct .num { color: var(--accent); }
+  .score-badge.wrong .num { color: var(--warn); }
+
+  .toast {
+    position: fixed;
+    bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(60px);
+    background: var(--ink);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 24px;
+    font-size: 14px;
+    transition: transform 0.3s, opacity 0.3s;
+    opacity: 0;
+    z-index: 999;
+    pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  /* Key icon styles */
+  .key-lock { font-size: 14px; opacity: 0.7; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo">Practice Zone</div>
+  <span class="badge">Demo</span>
+  <div class="spacer"></div>
+  <div class="api-pill" onclick="document.getElementById('api-key-input').focus()">
+    <span class="key-lock">🔑</span>
+    <input type="password" id="api-key-input" placeholder="Paste Anthropic API key…" autocomplete="off">
+  </div>
+</header>
+
+<!-- SCREEN 1: Setup / Upload PDF -->
+<div class="screen active" id="screen-setup">
+  <div class="setup-wrap">
+    <div class="setup-hero">
+      <h1>Upload your question PDF</h1>
+      <p>Drop in an RD Sharma chapter PDF — questions and solutions will be extracted automatically</p>
+    </div>
+
+    <div class="upload-card" id="drop-zone">
+      <input type="file" id="pdf-input" accept=".pdf" onchange="handlePdfSelect(event)">
+      <div class="upload-icon">📄</div>
+      <h3 id="pdf-filename">Choose a PDF file</h3>
+      <p>or drag and drop here · PDF format only</p>
+    </div>
+
+    <input class="chapter-name-input" id="chapter-name" placeholder="Chapter name (e.g. Quadratic Equations)" type="text">
+
+    <button class="parse-btn" id="parse-btn" onclick="startParsing()" disabled>Extract questions from PDF</button>
+
+    <div class="progress-bar-wrap" id="parse-progress">
+      <div class="progress-label" id="parse-label">Reading PDF…</div>
+      <div class="progress-track"><div class="progress-fill" id="parse-fill"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 2: Chapter list -->
+<div class="screen" id="screen-chapters">
+  <div class="chapters-wrap">
+    <div class="screen-title">Choose a chapter</div>
+    <div class="screen-sub">Select a chapter to start practicing</div>
+    <div class="chapter-grid" id="chapter-grid"></div>
+  </div>
+</div>
+
+<!-- SCREEN 3: Question + Evaluation -->
+<div class="screen" id="screen-question">
+  <div class="question-wrap">
+    <div class="q-topbar">
+      <button class="back-btn" onclick="goToChapters()">← Back</button>
+      <span class="q-chapter-name" id="q-chapter-label"></span>
+      <span class="q-fraction" id="q-fraction"></span>
+    </div>
+    <div class="q-progress-row" id="q-progress-row"></div>
+
+    <!-- Question display -->
+    <div class="q-card">
+      <div class="q-label">Question</div>
+      <div class="q-text" id="q-text"></div>
+      <img id="q-image" class="q-image-preview">
+    </div>
+
+    <!-- Answer upload -->
+    <div class="upload-answer-area" id="answer-area">
+      <h3>Upload your solution</h3>
+      <div class="img-upload-zone" id="img-zone">
+        <input type="file" id="answer-img-input" accept="image/*" capture="environment" onchange="handleAnswerImg(event)">
+        <div class="zone-icon">📷</div>
+        <p>Take a photo or upload image of your handwritten solution</p>
+      </div>
+      <div class="img-preview-wrap" id="img-preview-wrap">
+        <img id="answer-preview" src="" alt="Your solution">
+        <span class="change-btn" onclick="changeImage()">Change image</span>
+      </div>
+    </div>
+
+    <button class="submit-btn" id="submit-btn" onclick="submitAnswer()" disabled>Evaluate my answer →</button>
+
+    <!-- Evaluation loading -->
+    <div class="eval-loading" id="eval-loading">
+      <div class="spinner"></div>
+      <p>Analysing your solution…</p>
+      <div class="eval-steps">
+        <div class="eval-step active" id="es1">Reading your handwritten solution</div>
+        <div class="eval-step" id="es2">Comparing with correct solution</div>
+        <div class="eval-step" id="es3">Checking each step</div>
+        <div class="eval-step" id="es4">Preparing feedback</div>
+      </div>
+    </div>
+
+    <!-- Result -->
+    <div class="result-card" id="result-card">
+      <div class="result-header" id="result-header">
+        <div class="verdict-icon" id="verdict-icon"></div>
+        <div>
+          <div class="verdict-title" id="verdict-title"></div>
+          <div class="verdict-sub" id="verdict-sub"></div>
+        </div>
+      </div>
+      <div class="result-body">
+        <div class="result-section" id="appreciation-section">
+          <div class="result-section-label">Feedback</div>
+          <p id="appreciation-text"></p>
+        </div>
+        <div class="result-section" id="mistake-section" style="display:none">
+          <div class="result-section-label">Where you went wrong</div>
+          <div class="mistake-box" id="mistake-text"></div>
+        </div>
+        <div class="result-section" id="solution-section">
+          <div class="result-section-label">Correct solution</div>
+          <ul class="steps-list" id="steps-list"></ul>
+        </div>
+        <div class="result-section">
+          <div class="tip-box">
+            <span class="tip-icon">💡</span>
+            <span id="tip-text"></span>
+          </div>
+        </div>
+        <div class="action-row">
+          <button class="retry-btn" onclick="retryQuestion()">Try again</button>
+          <button class="next-btn" id="next-btn" onclick="nextQuestion()">Next question →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 4: Chapter complete -->
+<div class="screen" id="screen-complete">
+  <div class="complete-wrap">
+    <div class="complete-icon">🎉</div>
+    <h2>Chapter complete!</h2>
+    <p>You've worked through all the questions. Here's how you did:</p>
+    <div class="score-badges">
+      <div class="score-badge correct"><div class="num" id="score-correct">0</div><div class="lbl">Correct</div></div>
+      <div class="score-badge wrong"><div class="num" id="score-wrong">0</div><div class="lbl">Needs work</div></div>
+    </div>
+    <button class="next-btn" onclick="goToChapters()">Back to chapters</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+let chapters = [];
+let currentChapterIdx = null;
+let currentQIdx = 0;
+let currentAnswerImageBase64 = null;
+let sessionStats = {};
+
+const CHAPTER_ICONS = ['📐','📏','📊','🔢','📈','🔣','📉','🧮','🔬','💡'];
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function handlePdfSelect(evt) {
+  const file = evt.target.files[0];
+  if (!file) return;
+  document.getElementById('pdf-filename').textContent = file.name;
+  document.getElementById('parse-btn').disabled = false;
+}
+
+const dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type === 'application/pdf') {
+    document.getElementById('pdf-input').files = e.dataTransfer.files;
+    document.getElementById('pdf-filename').textContent = file.name;
+    document.getElementById('parse-btn').disabled = false;
+  }
+});
+
+async function startParsing() {
+  const file = document.getElementById('pdf-input').files[0];
+  if (!file) return;
+  const chapterName = document.getElementById('chapter-name').value.trim() || 'Chapter 1';
+  const apiKey = document.getElementById('api-key-input').value.trim();
+  if (!apiKey) { showToast('Please enter your Anthropic API key first'); return; }
+
+  document.getElementById('parse-btn').disabled = true;
+  const progressWrap = document.getElementById('parse-progress');
+  const fill = document.getElementById('parse-fill');
+  const label = document.getElementById('parse-label');
+  progressWrap.classList.add('show');
+
+  label.textContent = 'Reading PDF pages…';
+  fill.style.width = '10%';
+
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const totalPages = pdf.numPages;
+
+  label.textContent = `Extracting text from ${totalPages} pages…`;
+  fill.style.width = '25%';
+
+  let fullText = '';
+  for (let i = 1; i <= totalPages; i++) {
+    const page = await pdf.getPage(i);
+    const tc = await page.getTextContent();
+    fullText += tc.items.map(it => it.str).join(' ') + '\n---PAGE---\n';
+    fill.style.width = (25 + (i / totalPages) * 35) + '%';
+  }
+
+  label.textContent = 'Using AI to extract questions & solutions…';
+  fill.style.width = '65%';
+
+  const questions = await extractQuestionsWithAI(fullText, chapterName, apiKey);
+  fill.style.width = '90%';
+
+  if (!questions || questions.length === 0) {
+    showToast('Could not extract questions. Check PDF content or API key.');
+    document.getElementById('parse-btn').disabled = false;
+    progressWrap.classList.remove('show');
+    return;
+  }
+
+  fill.style.width = '100%';
+  label.textContent = `Found ${questions.length} questions!`;
+
+  chapters.push({ name: chapterName, questions, icon: CHAPTER_ICONS[chapters.length % CHAPTER_ICONS.length] });
+  sessionStats[chapters.length - 1] = { correct: 0, wrong: 0, attempts: {} };
+
+  setTimeout(() => { progressWrap.classList.remove('show'); renderChapters(); showScreen('screen-chapters'); }, 700);
+}
+
+async function extractQuestionsWithAI(text, chapterName, apiKey) {
+  const prompt = `You are extracting math questions and their solutions from a textbook PDF.
+
+The text below is from "${chapterName}". Extract ALL distinct questions with their step-by-step solutions.
+
+Return a JSON array ONLY, no other text. Format:
+[
+  {
+    "question": "full question text here",
+    "solution_steps": ["Step 1: ...", "Step 2: ...", "Step 3: ..."],
+    "final_answer": "the final answer"
+  }
+]
+
+Rules:
+- Extract every numbered question you find
+- Keep question text complete and faithful
+- Break solutions into clear numbered steps
+- If a solution has a final answer, put it in final_answer
+- If you find fewer than 3 questions, still return what you find
+- Return ONLY valid JSON array, nothing else
+
+PDF TEXT:
+${text.slice(0, 12000)}`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await resp.json();
+    if (data.error) { showToast('API error: ' + data.error.message); return null; }
+    const raw = data.content[0].text.trim();
+    const jsonMatch = raw.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) return null;
+    return JSON.parse(jsonMatch[0]);
+  } catch(e) {
+    showToast('Failed to parse questions: ' + e.message);
+    return null;
+  }
+}
+
+function renderChapters() {
+  const grid = document.getElementById('chapter-grid');
+  grid.innerHTML = '';
+  chapters.forEach((ch, i) => {
+    const stats = sessionStats[i] || { correct: 0, wrong: 0 };
+    const total = ch.questions.length;
+    const done = stats.correct + stats.wrong;
+    const dots = Array.from({ length: Math.min(total, 8) }, (_, di) => {
+      const cls = di < done ? 'dot done' : 'dot';
+      return `<div class="${cls}"></div>`;
+    }).join('');
+    const card = document.createElement('div');
+    card.className = 'chapter-card';
+    card.innerHTML = `
+      <div class="chapter-icon">${ch.icon}</div>
+      <h3>${ch.name}</h3>
+      <div class="q-count">${total} question${total !== 1 ? 's' : ''} · ${done} attempted</div>
+      <div class="progress-dots">${dots}</div>
+    `;
+    card.onclick = () => startChapter(i);
+    grid.appendChild(card);
+  });
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'add-chapter-btn';
+  addBtn.innerHTML = '＋ Add another chapter';
+  addBtn.onclick = () => { showScreen('screen-setup'); document.getElementById('parse-btn').disabled = true; document.getElementById('pdf-filename').textContent = 'Choose a PDF file'; document.getElementById('chapter-name').value = ''; };
+  grid.appendChild(addBtn);
+}
+
+function startChapter(idx) {
+  currentChapterIdx = idx;
+  currentQIdx = 0;
+  if (!sessionStats[idx]) sessionStats[idx] = { correct: 0, wrong: 0, attempts: {} };
+  showQuestion();
+  showScreen('screen-question');
+}
+
+function showQuestion() {
+  const ch = chapters[currentChapterIdx];
+  const q = ch.questions[currentQIdx];
+  const total = ch.questions.length;
+
+  document.getElementById('q-chapter-label').textContent = ch.name;
+  document.getElementById('q-fraction').textContent = `${currentQIdx + 1} / ${total}`;
+  document.getElementById('q-text').textContent = q.question;
+
+  const row = document.getElementById('q-progress-row');
+  row.innerHTML = '';
+  for (let i = 0; i < total; i++) {
+    const tick = document.createElement('div');
+    const st = sessionStats[currentChapterIdx];
+    if (st && st.attempts[i] === 'correct') tick.className = 'q-tick done';
+    else if (i === currentQIdx) tick.className = 'q-tick current';
+    else tick.className = 'q-tick';
+    row.appendChild(tick);
+  }
+
+  document.getElementById('answer-area').style.display = 'block';
+  document.getElementById('submit-btn').style.display = 'block';
+  document.getElementById('eval-loading').classList.remove('show');
+  document.getElementById('result-card').classList.remove('show');
+
+  currentAnswerImageBase64 = null;
+  document.getElementById('img-zone').style.display = 'block';
+  document.getElementById('img-preview-wrap').style.display = 'none';
+  document.getElementById('submit-btn').disabled = true;
+}
+
+function handleAnswerImg(evt) {
+  const file = evt.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    currentAnswerImageBase64 = e.target.result.split(',')[1];
+    document.getElementById('answer-preview').src = e.target.result;
+    document.getElementById('img-zone').style.display = 'none';
+    document.getElementById('img-preview-wrap').style.display = 'block';
+    document.getElementById('submit-btn').disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+
+function changeImage() {
+  currentAnswerImageBase64 = null;
+  document.getElementById('img-zone').style.display = 'block';
+  document.getElementById('img-preview-wrap').style.display = 'none';
+  document.getElementById('submit-btn').disabled = true;
+  document.getElementById('answer-img-input').value = '';
+}
+
+async function submitAnswer() {
+  const apiKey = document.getElementById('api-key-input').value.trim();
+  if (!apiKey) { showToast('Please enter your API key in the header'); return; }
+
+  const ch = chapters[currentChapterIdx];
+  const q = ch.questions[currentQIdx];
+
+  document.getElementById('answer-area').style.display = 'none';
+  document.getElementById('submit-btn').style.display = 'none';
+  document.getElementById('eval-loading').classList.add('show');
+  document.getElementById('result-card').classList.remove('show');
+
+  animateEvalSteps();
+
+  const result = await evaluateAnswer(q, currentAnswerImageBase64, apiKey);
+
+  document.getElementById('eval-loading').classList.remove('show');
+
+  if (!result) { showToast('Evaluation failed. Try again.'); document.getElementById('answer-area').style.display = 'block'; document.getElementById('submit-btn').style.display = 'block'; return; }
+
+  renderResult(result);
+  updateStats(result.verdict);
+}
+
+function animateEvalSteps() {
+  const steps = ['es1','es2','es3','es4'];
+  steps.forEach(id => { document.getElementById(id).className = 'eval-step'; });
+  document.getElementById('es1').className = 'eval-step active';
+  let i = 0;
+  const iv = setInterval(() => {
+    if (i < steps.length) {
+      if (i > 0) document.getElementById(steps[i-1]).className = 'eval-step done';
+      if (i < steps.length) document.getElementById(steps[i]).className = 'eval-step active';
+      i++;
+    } else { clearInterval(iv); }
+  }, 900);
+}
+
+async function evaluateAnswer(q, imageBase64, apiKey) {
+  const solutionText = q.solution_steps.map((s, i) => `${i+1}. ${s}`).join('\n');
+  const systemPrompt = `You are a warm, encouraging maths tutor evaluating a student's handwritten solution.
+Respond ONLY with a valid JSON object, no markdown, no extra text.`;
+
+  const userPrompt = `Question: ${q.question}
+
+Correct solution:
+${solutionText}
+Final answer: ${q.final_answer}
+
+The student has submitted a handwritten solution image. Evaluate it carefully.
+
+Return this JSON:
+{
+  "verdict": "correct" | "partially_correct" | "incorrect",
+  "appreciation": "warm specific praise (always include, even if wrong — acknowledge effort)",
+  "mistakes": "explain mistake kindly if verdict is not correct, else empty string",
+  "correct_solution_steps": ["Step 1: ...", "Step 2: ..."],
+  "tip": "one key concept or trick to remember for this type of question"
+}`;
+
+  const messages = [{
+    role: 'user',
+    content: [
+      { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: imageBase64 } },
+      { type: 'text', text: userPrompt }
+    ]
+  }];
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, system: systemPrompt, messages })
+    });
+    const data = await resp.json();
+    if (data.error) { showToast('API error: ' + data.error.message); return null; }
+    const raw = data.content[0].text.trim();
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return null;
+    return JSON.parse(jsonMatch[0]);
+  } catch(e) {
+    showToast('Error: ' + e.message);
+    return null;
+  }
+}
+
+function renderResult(result) {
+  const card = document.getElementById('result-card');
+  const header = document.getElementById('result-header');
+  const icon = document.getElementById('verdict-icon');
+  const title = document.getElementById('verdict-title');
+  const sub = document.getElementById('verdict-sub');
+
+  header.className = 'result-header';
+  if (result.verdict === 'correct') {
+    header.classList.add('verdict-correct');
+    icon.textContent = '✓';
+    title.textContent = 'Correct!';
+    sub.textContent = 'Well done — your answer and method are both right';
+  } else if (result.verdict === 'partially_correct') {
+    header.classList.add('verdict-partial');
+    icon.textContent = '~';
+    title.textContent = 'Partially correct';
+    sub.textContent = 'You\'re on the right track — check the feedback below';
+  } else {
+    header.classList.add('verdict-wrong');
+    icon.textContent = '✗';
+    title.textContent = 'Not quite';
+    sub.textContent = 'No worries — review the correct solution below';
+  }
+
+  document.getElementById('appreciation-text').textContent = result.appreciation;
+
+  const mistakeSection = document.getElementById('mistake-section');
+  if (result.mistakes && result.verdict !== 'correct') {
+    document.getElementById('mistake-text').textContent = result.mistakes;
+    mistakeSection.style.display = 'block';
+  } else {
+    mistakeSection.style.display = 'none';
+  }
+
+  const stepsList = document.getElementById('steps-list');
+  stepsList.innerHTML = '';
+  (result.correct_solution_steps || []).forEach((step, i) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<div class="step-num">${i+1}</div><div>${step}</div>`;
+    stepsList.appendChild(li);
+  });
+
+  document.getElementById('tip-text').textContent = result.tip;
+
+  const nextBtn = document.getElementById('next-btn');
+  const ch = chapters[currentChapterIdx];
+  if (currentQIdx >= ch.questions.length - 1) {
+    nextBtn.textContent = 'Finish chapter';
+  } else {
+    nextBtn.textContent = 'Next question →';
+  }
+
+  card.classList.add('show');
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function updateStats(verdict) {
+  const st = sessionStats[currentChapterIdx];
+  if (verdict === 'correct') st.correct++;
+  else st.wrong++;
+  st.attempts[currentQIdx] = verdict === 'correct' ? 'correct' : 'wrong';
+}
+
+function retryQuestion() {
+  currentAnswerImageBase64 = null;
+  document.getElementById('result-card').classList.remove('show');
+  document.getElementById('answer-area').style.display = 'block';
+  document.getElementById('submit-btn').style.display = 'block';
+  document.getElementById('submit-btn').disabled = true;
+  document.getElementById('img-zone').style.display = 'block';
+  document.getElementById('img-preview-wrap').style.display = 'none';
+  document.getElementById('answer-img-input').value = '';
+}
+
+function nextQuestion() {
+  const ch = chapters[currentChapterIdx];
+  if (currentQIdx >= ch.questions.length - 1) {
+    const st = sessionStats[currentChapterIdx];
+    document.getElementById('score-correct').textContent = st.correct;
+    document.getElementById('score-wrong').textContent = st.wrong;
+    showScreen('screen-complete');
+  } else {
+    currentQIdx++;
+    showQuestion();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+function goToChapters() {
+  renderChapters();
+  showScreen('screen-chapters');
+}
+</script>
+</body>
+</html>
